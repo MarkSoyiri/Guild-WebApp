@@ -1,0 +1,601 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------------------------
+// Identity & membership
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+  role         String   @default("MEMBER") // SUPER_ADMIN | GUILD_ADMIN | MODERATOR | MEMBER
+  status       String   @default("ACTIVE") // ACTIVE | BANNED
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile             PlayerProfile?
+  memberships         GuildMembership[]
+  xpTransactions      GuildXPTransaction[]
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordReset[]
+  achievements        UserAchievement[]
+  challengeProgress   ChallengeProgress[]
+  eventParticipations EventParticipant[]
+  teamMemberships     TeamMember[]
+  posts               Post[]
+  comments            Comment[]
+  reactions           Reaction[]
+  notifications       Notification[]
+  activityEntries     GuildActivity[]
+  squadRequests       SquadRequest[]
+  squadParticipations SquadRequestParticipant[]
+  joinRequests        JoinRequest[]
+  announcements       Announcement[]
+  organizedEvents     Event[] @relation("EventOrganizer")
+  leaderboardEntries  LeaderboardSnapshot[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Guild {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  tag         String
+  region      String    @default("MENA")
+  description String?
+  motto       String?
+  level       Int       @default(1)
+  xp          Int       @default(0)
+  logoUrl     String?
+  foundedAt   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  memberships GuildMembership[]
+  joinRequests JoinRequest[]
+  challenges  Challenge[]
+  teams       Team[]
+  seasons     Season[]
+  activities  GuildActivity[]
+  tournaments Tournament[]
+}
+
+model GuildMembership {
+  id        String   @id @default(cuid())
+  guildId   String
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guildRole String   @default("MEMBER") // LEADER | OFFICER | MEMBER | TRIAL
+  guildXp   Int      @default(0)
+  seasonXp  Int      @default(0)
+  joinedAt  DateTime @default(now())
+
+  @@unique([guildId, userId])
+  @@index([guildXp])
+}
+
+model GuildXPTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  kind      String   // EARN | SPEND | ADJUST
+  reason    String   // MATCH | CHALLENGE | EVENT | ACHIEVEMENT | TOURNAMENT | COMMUNITY | ADMIN | SEASON | SYNC
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model GuildRole {
+  id          String @id @default(cuid())
+  name        String @unique // SUPER_ADMIN | GUILD_ADMIN | MODERATOR | MEMBER
+  permissions String // JSON array of permission keys
+  description String?
+}
+
+model JoinRequest {
+  id        String    @id @default(cuid())
+  guildId   String
+  guild     Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String?
+  status    String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  decidedBy String?
+  decidedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([guildId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Free Fire identity & statistics
+// ---------------------------------------------------------------------------
+
+model PlayerProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ffUid         String?   @unique
+  ffNickname    String?
+  region        String    @default("MENA")
+  playerRole    String    @default("FLEX") // RUSHER | SNIPER | SUPPORT | IGL | FLEX | ENTRY | OTHER
+  rank          String    @default("BRONZE") // BRONZE..GRANDMASTER
+  rankPoints    Int       @default(0)
+  level         Int       @default(1)
+  lastSyncAt    DateTime?
+  lastSyncProvider String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  stats   FreeFireStats?
+  matches FreeFireMatch[]
+  syncLogs SyncLog[]
+
+  @@index([ffUid])
+  @@index([region])
+}
+
+model FreeFireStats {
+  id           String   @id @default(cuid())
+  playerId     String   @unique
+  player       PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  kills        Int      @default(0)
+  deaths       Int      @default(0)
+  matches      Int      @default(0)
+  wins         Int      @default(0)
+  headshots    Int      @default(0)
+  mvps         Int      @default(0)
+  clutchWins   Int      @default(0)
+  top10s       Int      @default(0)
+  mostKillsInMatch Int  @default(0)
+  totalXP      Int      @default(0)
+  kdRatio      Float    @default(0)
+  winRate      Float    @default(0)
+
+  weeklyKills     Int @default(0)
+  weeklyWins      Int @default(0)
+  weeklyMatches   Int @default(0)
+  weeklyHeadshots Int @default(0)
+  weeklyMvps      Int @default(0)
+  weeklyDeaths    Int @default(0)
+
+  monthlyKills     Int @default(0)
+  monthlyWins      Int @default(0)
+  monthlyMatches   Int @default(0)
+  monthlyHeadshots Int @default(0)
+  monthlyMvps      Int @default(0)
+  monthlyDeaths    Int @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@index([kills])
+  @@index([wins])
+  @@index([kdRatio])
+  @@index([headshots])
+  @@index([mvps])
+  @@index([weeklyKills])
+  @@index([weeklyWins])
+  @@index([weeklyMatches])
+  @@index([monthlyKills])
+  @@index([monthlyWins])
+}
+
+model FreeFireMatch {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  externalId String
+  mode      String   // BR_RANKED | BR_CLASSIC | CS_RANKED | CUSTOM_ROOM | CLASH_SQUAD
+  result    String   // BOOYAH | TOP5 | TOP10 | ELIMINATED
+  placement Int
+  kills     Int
+  assists   Int      @default(0)
+  damage    Int      @default(0)
+  headshots Int      @default(0)
+  isMvp     Boolean  @default(false)
+  playedAt  DateTime
+
+  @@unique([playerId, externalId])
+  @@index([playerId, playedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Progression
+// ---------------------------------------------------------------------------
+
+model Achievement {
+  id               String @id @default(cuid())
+  key              String @unique
+  name             String
+  description      String
+  icon             String
+  rarity           String @default("COMMON") // COMMON | RARE | EPIC | LEGENDARY
+  requirementType  String // KILLS | WINS | HEADSHOTS | MVPS | CLUTCH_WINS | KD | MATCHES | MOST_KILLS | LOYALTY_DAYS | POSTS | TEAMS | TOURNAMENT_WINS | XP
+  requirementValue Int
+  rewardXp         Int    @default(0)
+  order            Int    @default(0)
+  createdAt        DateTime @default(now())
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  progress      Int       @default(0)
+  unlocked      Boolean   @default(false)
+  unlockedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([unlocked, unlockedAt])
+}
+
+model Challenge {
+  id          String   @id @default(cuid())
+  guildId     String
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  metric      String   // KILLS | WINS | HEADSHOTS | MATCHES | RANKED_MATCHES | CUSTOM_ROOMS | MVPS
+  goal        Int
+  rewardXp    Int
+  status      String   @default("ACTIVE") // DRAFT | ACTIVE | COMPLETED | FAILED | CANCELLED
+  startsAt    DateTime
+  endsAt      DateTime
+  completedAt DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  progress ChallengeProgress[]
+
+  @@index([guildId, status])
+}
+
+model ChallengeProgress {
+  id          String    @id @default(cuid())
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress    Int       @default(0)
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([challengeId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Events & teams & tournaments
+// ---------------------------------------------------------------------------
+
+model Event {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  type            String   // CUSTOM_ROOM | TOURNAMENT | PRACTICE | MEETING | COMMUNITY
+  mode            String?
+  location        String?
+  startsAt        DateTime
+  endsAt          DateTime
+  maxParticipants Int?
+  organizerId     String
+  organizer       User     @relation("EventOrganizer", fields: [organizerId], references: [id])
+  status          String   @default("SCHEDULED") // SCHEDULED | ONGOING | COMPLETED | CANCELLED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  participants EventParticipant[]
+
+  @@index([startsAt])
+  @@index([status])
+}
+
+model EventParticipant {
+  id       String   @id @default(cuid())
+  eventId  String
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  guildId     String
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  name        String
+  tag         String?
+  description String?
+  captainId   String
+  wins        Int      @default(0)
+  matches     Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  members TeamMember[]
+  tournamentParticipants TournamentParticipant[]
+  tournamentMatchesA TournamentMatch[] @relation("MatchTeamA")
+  tournamentMatchesB TournamentMatch[] @relation("MatchTeamB")
+
+  @@unique([guildId, name])
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String   @default("PLAYER") // CAPTAIN | CO_CAPTAIN | PLAYER | SUB
+  joinedAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+}
+
+model Tournament {
+  id           String   @id @default(cuid())
+  guildId      String
+  guild        Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  format       String   @default("SINGLE_ELIM") // SINGLE_ELIM
+  size         Int      @default(8)
+  status       String   @default("REGISTRATION") // REGISTRATION | ACTIVE | COMPLETED | CANCELLED
+  startsAt     DateTime
+  endsAt       DateTime?
+  prize        String?
+  winnerTeamId String?
+  mvpId        String?
+  createdBy    String
+  createdAt    DateTime @default(now())
+
+  participants TournamentParticipant[]
+  matches      TournamentMatch[]
+
+  @@index([guildId, status])
+}
+
+model TournamentParticipant {
+  id           String    @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  seed         Int?
+  status       String     @default("REGISTERED") // REGISTERED | ELIMINATED | CHAMPION | WITHDRAWN
+  registeredAt DateTime   @default(now())
+
+  @@unique([tournamentId, teamId])
+}
+
+model TournamentMatch {
+  id           String    @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        Int // 0 = final, 1 = semi, 2 = quarter, ...
+  position     Int
+  teamAId      String?
+  teamA        Team?     @relation("MatchTeamA", fields: [teamAId], references: [id])
+  teamBId      String?
+  teamB        Team?     @relation("MatchTeamB", fields: [teamBId], references: [id])
+  scoreA       Int       @default(0)
+  scoreB       Int       @default(0)
+  winnerId     String?
+  status       String    @default("SCHEDULED") // SCHEDULED | COMPLETED | FORFEIT
+  mvpId        String?
+  playedAt     DateTime?
+
+  @@unique([tournamentId, round, position])
+}
+
+// ---------------------------------------------------------------------------
+// Communication
+// ---------------------------------------------------------------------------
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  priority    String    @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
+  pinned      Boolean   @default(false)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([pinned, publishedAt])
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  type        String   @default("TEXT") // TEXT | ACHIEVEMENT | MATCH_RESULT | ANNOUNCEMENT | TOURNAMENT_RESULT
+  content     String
+  referenceId String?
+  status      String   @default("PUBLISHED") // PUBLISHED | HIDDEN
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  comments  Comment[]
+  reactions Reaction[]
+
+  @@index([status, createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("LIKE") // LIKE | FIRE | CLUTCH | GG | BOOYAH
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // ACHIEVEMENT | INVITE | EVENT | GUILD | MENTION | CHALLENGE | ANNOUNCEMENT | TOURNAMENT | JOIN_REQUEST | SYNC | SYSTEM
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model GuildActivity {
+  id        String   @id @default(cuid())
+  guildId   String
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  type      String   // MEMBER_JOINED | RANK_UP | ACHIEVEMENT | TOURNAMENT_WON | CHALLENGE_COMPLETED | ANNOUNCEMENT | EVENT_CREATED | MATCH_WON | MATCH_PLAYED | TEAM_FORMED | XP_MILESTONE | GUILD_LEVEL | SEASON_START | SEASON_END
+  message   String
+  payload   String?
+  createdAt DateTime @default(now())
+
+  @@index([guildId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Squad finder
+// ---------------------------------------------------------------------------
+
+model SquadRequest {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          String
+  rank          String
+  mic           Boolean   @default(true)
+  playersNeeded Int       @default(2)
+  note          String?
+  status        String    @default("OPEN") // OPEN | FULL | CLOSED | EXPIRED
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+
+  participants SquadRequestParticipant[]
+
+  @@index([status, expiresAt])
+}
+
+model SquadRequestParticipant {
+  id        String       @id @default(cuid())
+  requestId String
+  request   SquadRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime     @default(now())
+
+  @@unique([requestId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Sync & seasons
+// ---------------------------------------------------------------------------
+
+model SyncLog {
+  id         String    @id @default(cuid())
+  playerId   String?
+  player     PlayerProfile? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  provider   String
+  status     String    // SUCCESS | FAILED | RUNNING | SKIPPED
+  triggeredBy String   // MANUAL | SCHEDULED | JOB
+  message    String?
+  durationMs Int?
+  createdAt  DateTime  @default(now())
+
+  @@index([playerId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Season {
+  id        String    @id @default(cuid())
+  guildId   String
+  guild     Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  number    Int
+  name      String
+  startsAt  DateTime
+  endsAt    DateTime
+  status    String    @default("ACTIVE") // UPCOMING | ACTIVE | ENDED
+  createdAt DateTime  @default(now())
+
+  snapshots LeaderboardSnapshot[]
+
+  @@unique([guildId, number])
+}
+
+model LeaderboardSnapshot {
+  id         String   @id @default(cuid())
+  seasonId   String
+  season     Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  category   String   // OVERALL | WEEKLY | MONTHLY | WINS | KILLS | KD | HEADSHOTS | GUILD_XP | MVP | ACTIVE | IMPROVED
+  rank       Int
+  value      Float
+  capturedAt DateTime @default(now())
+
+  @@index([seasonId, category, rank])
+}

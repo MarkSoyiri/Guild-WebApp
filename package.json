@@ -1,0 +1,39 @@
+{
+  "name": "kings-only-guild",
+  "private": true,
+  "version": "1.0.0",
+  "description": "KINGS ONLY — Free Fire guild community platform",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c yellow,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w server && npm run build -w client",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "db:push": "prisma db push",
+    "db:migrate": "node scripts/prod-schema.mjs && prisma migrate dev --schema prisma/schema.prod.prisma",
+    "db:deploy": "node scripts/prod-schema.mjs && prisma migrate deploy --schema prisma/schema.prod.prisma",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "seed:reset": "prisma db push --force-reset && prisma db seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "prisma": "^6.2.0",
+    "semver": "^7.8.5",
+    "tsx": "^4.19.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "enhanced-resolve": "^5.24.5",
+    "framer-motion": "^12.43.0",
+    "lucide-react": "^1.33.0",
+    "react-router-dom": "^7.18.2"
+  }
+}
