@@ -41,7 +41,7 @@ export function CommunityPage() {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.posts('pageSize=30'),
-    queryFn: () => get<Paginated<Post>>('/posts?pageSize=30'),
+    queryFn: () => get<Paginated<Post>>('/community/posts?pageSize=30'),
   });
 
   return (
@@ -89,7 +89,7 @@ function ComposeCard() {
   const [content, setContent] = useState('');
 
   const createMutation = useMutation({
-    mutationFn: () => apiPost<{ id: string }>('/posts', { type, content }),
+    mutationFn: () => apiPost<{ id: string }>('/community/posts', { type, content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.posts('pageSize=30') });
       setContent('');
@@ -147,23 +147,23 @@ function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expan
 
   const { data: detail } = useQuery({
     queryKey: QUERY_KEYS.post(post.id),
-    queryFn: () => get<PostDetail>(`/posts/${post.id}`),
+    queryFn: () => get<PostDetail>(`/community/posts/${post.id}`),
     enabled: expanded,
   });
 
   const { data: comments } = useQuery({
     queryKey: QUERY_KEYS.comments(post.id),
-    queryFn: () => get<Comment[]>(`/posts/${post.id}/comments`),
+    queryFn: () => get<Comment[]>(`/community/posts/${post.id}/comments`),
     enabled: expanded,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => del<{ ok: boolean }>(`/posts/${post.id}`),
+    mutationFn: () => del<{ ok: boolean }>(`/community/posts/${post.id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.posts('pageSize=30') }),
   });
 
   const reactionMutation = useMutation({
-    mutationFn: (reaction: ReactionType) => apiPost<{ ok: boolean }>(`/posts/${post.id}/reactions`, { type: reaction }),
+    mutationFn: (reaction: ReactionType) => apiPost<{ ok: boolean }>(`/community/posts/${post.id}/reactions`, { type: reaction }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(post.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.posts('pageSize=30') });
@@ -171,7 +171,7 @@ function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expan
   });
 
   const commentMutation = useMutation({
-    mutationFn: (content: string) => apiPost<{ ok: boolean }>(`/posts/${post.id}/comments`, { content }),
+    mutationFn: (content: string) => apiPost<{ ok: boolean }>(`/community/posts/${post.id}/comments`, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comments(post.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(post.id) });
@@ -261,7 +261,7 @@ function CommentRow({ comment, isModerator }: { comment: Comment; isModerator: b
   const canDelete = isModerator || comment.authorId === me?.id;
 
   const deleteMutation = useMutation({
-    mutationFn: () => del<{ ok: boolean }>(`/comments/${comment.id}`),
+    mutationFn: () => del<{ ok: boolean }>(`/community/comments/${comment.id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comments(comment.postId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(comment.postId) });
