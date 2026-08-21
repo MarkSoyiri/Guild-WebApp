@@ -292,6 +292,7 @@ function MembersTab() {
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [guildRole, setGuildRole] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search.trim()), 300);
@@ -308,22 +309,62 @@ function MembersTab() {
     },
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.players('') });
+  const listKey = QUERY_KEYS.players(`admin:${debounced}:${guildRole}`);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['players'] });
 
   const guildRoleMutation = useMutation({
     mutationFn: ({ membershipId, role }: { membershipId: string; role: GuildRole }) =>
       patch<{ ok: boolean }>(`/admin/members/${membershipId}/guild-role`, { guildRole: role }),
-    onSuccess: invalidate,
+    onMutate: async ({ membershipId, role }) => {
+      setActionError(null);
+      await queryClient.cancelQueries({ queryKey: ['players'] });
+      const previous = queryClient.getQueryData<Paginated<AdminMemberRow>>(listKey);
+      queryClient.setQueryData<Paginated<AdminMemberRow>>(listKey, (old) =>
+        old ? { ...old, items: old.items.map((m) => (m.id === membershipId ? { ...m, guildRole: role } : m)) } : old,
+      );
+      return { previous };
+    },
+    onError: (err: unknown, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(listKey, context.previous);
+      setActionError(err instanceof ApiError ? err.message : 'Something went wrong.');
+    },
+    onSettled: () => invalidate(),
   });
 
   const userRoleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: string }) => patch<{ ok: boolean }>(`/admin/members/${userId}/role`, { role }),
-    onSuccess: invalidate,
+    onMutate: async ({ userId, role }) => {
+      setActionError(null);
+      await queryClient.cancelQueries({ queryKey: ['players'] });
+      const previous = queryClient.getQueryData<Paginated<AdminMemberRow>>(listKey);
+      queryClient.setQueryData<Paginated<AdminMemberRow>>(listKey, (old) =>
+        old ? { ...old, items: old.items.map((m) => (m.user.id === userId ? { ...m, user: { ...m.user, role } } : m)) } : old,
+      );
+      return { previous };
+    },
+    onError: (err: unknown, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(listKey, context.previous);
+      setActionError(err instanceof ApiError ? err.message : 'Something went wrong.');
+    },
+    onSettled: () => invalidate(),
   });
 
   const removeMutation = useMutation({
     mutationFn: (userId: string) => del<{ ok: boolean }>(`/admin/members/${userId}`),
-    onSuccess: invalidate,
+    onMutate: async (userId) => {
+      setActionError(null);
+      await queryClient.cancelQueries({ queryKey: ['players'] });
+      const previous = queryClient.getQueryData<Paginated<AdminMemberRow>>(listKey);
+      queryClient.setQueryData<Paginated<AdminMemberRow>>(listKey, (old) =>
+        old ? { ...old, items: old.items.filter((m) => m.user.id !== userId), total: Math.max(old.total - 1, 0) } : old,
+      );
+      return { previous };
+    },
+    onError: (err: unknown, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(listKey, context.previous);
+      setActionError(err instanceof ApiError ? err.message : 'Something went wrong.');
+    },
+    onSettled: () => invalidate(),
   });
 
   const MEMBER_TEMPLATE = 'md:grid md:grid-cols-[2.5rem_minmax(0,1fr)_7rem_8.5rem_8.5rem_2.5rem] md:items-center md:gap-3';
@@ -345,6 +386,9 @@ function MembersTab() {
           ))}
         </Select>
       </div>
+      {actionError ? (
+        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-[13px] text-danger">{actionError}</p>
+      ) : null}
       <AsyncView
         isLoading={isLoading}
         isError={isError}
