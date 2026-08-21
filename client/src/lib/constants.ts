@@ -212,7 +212,7 @@ export const QUERY_KEYS = {
 
 export const POLL = {
   comments: 5_000,
-  community: 15_000,
+  community: 8_000,
   notificationsList: 15_000,
   unreadCount: 30_000,
   dashboard: 30_000,
