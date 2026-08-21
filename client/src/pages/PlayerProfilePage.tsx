@@ -37,7 +37,11 @@ export function PlayerProfilePage() {
     mutationFn: () => post<{ status: string }>('/freefire/sync/me'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.player(userId ?? '') });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myMatches(1) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaderboards });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.playerLists });
     },
   });
 

@@ -80,7 +80,8 @@ export async function syncPlayer(playerId: string, triggeredBy: 'MANUAL' | 'SCHE
   const startedAt = Date.now();
 
   try {
-    const [remoteStats, remoteRank, remoteMatches] = await Promise.all([
+    const [remoteProfile, remoteStats, remoteRank, remoteMatches] = await Promise.all([
+      provider.getPlayerProfile(profile.ffUid, profile.region),
       provider.getPlayerStats(profile.ffUid, profile.region),
       provider.getRankData(profile.ffUid, profile.region),
       provider.getMatchHistory(profile.ffUid, profile.region, 12),
@@ -243,7 +244,12 @@ export async function syncPlayer(playerId: string, triggeredBy: 'MANUAL' | 'SCHE
 
     await prisma.playerProfile.update({
       where: { id: playerId },
-      data: { lastSyncAt: new Date(), lastSyncProvider: provider.id },
+      data: {
+        lastSyncAt: new Date(),
+        lastSyncProvider: provider.id,
+        ffNickname: remoteProfile.nickname,
+        level: remoteProfile.level,
+      },
     });
 
     await contributeToChallenges(profile.userId, {

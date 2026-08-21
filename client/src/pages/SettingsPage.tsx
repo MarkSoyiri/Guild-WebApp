@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Crosshair, Radio, RefreshCw, Save, Swords, type LucideIcon } from 'lucide-react';
-import { ApiError, get, patch, uploadAvatar } from '../lib/api';
+import { ApiError, get, patch, post, uploadAvatar } from '../lib/api';
 import { PLAYER_ROLE_LABELS, QUERY_KEYS, REGIONS, type PlayerRole } from '../lib/constants';
 import type { FreeFireMatch, Paginated, PlayerDetail, SyncStatus } from '../lib/types';
 import { formatDateTime } from '../lib/format';
@@ -170,6 +170,7 @@ function ProfileForm({ detail }: { detail: PlayerDetail }) {
     playerRole: (profile?.playerRole ?? 'FLEX') as PlayerRole,
   });
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -182,15 +183,30 @@ function ProfileForm({ detail }: { detail: PlayerDetail }) {
   }, [profile?.ffUid, profile?.ffNickname, profile?.region, profile?.playerRole]);
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      patch<{ ok: boolean }>('/players/me', {
+    mutationFn: async () => {
+      await patch<{ ok: boolean }>('/players/me', {
         ffUid: form.ffUid.trim() || null,
         ffNickname: form.ffNickname.trim() || null,
         region: form.region,
         playerRole: form.playerRole,
-      }),
-    onSuccess: () => {
+      });
+      if (!form.ffUid.trim()) return null;
+      return post<{ status: string; message: string }>('/freefire/sync/me');
+    },
+    onSuccess: (synced) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.player('me') });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myMatches(1) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaderboards });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.playerLists });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard });
+      setError(null);
+      if (synced?.status === 'SKIPPED') {
+        setNotice(synced.message);
+        setTimeout(() => setNotice(null), 4000);
+        return;
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     },
@@ -236,9 +252,10 @@ function ProfileForm({ detail }: { detail: PlayerDetail }) {
           </Select>
         </Field>
         {error ? <p className="sm:col-span-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 font-mono text-[12px] text-danger">{error}</p> : null}
+        {notice ? <p className="sm:col-span-2 rounded-lg border border-border bg-elevated px-3 py-2 font-mono text-[12px] text-muted">{notice}</p> : null}
         <div className="sm:col-span-2 flex items-center gap-3">
           <Button type="submit" loading={saveMutation.isPending} icon={<Save size={15} />}>
-            Save profile
+            {saveMutation.isPending && form.ffUid.trim() ? 'Saving — pulling intel…' : 'Save profile'}
           </Button>
           {saved ? <span className="text-[12px] font-semibold text-success">Committed — intel updated</span> : null}
         </div>
@@ -252,12 +269,13 @@ function SyncCard({ status, lastSyncAt }: { status: SyncStatus | undefined; last
   const [error, setError] = useState<string | null>(null);
 
   const syncMutation = useMutation({
-    mutationFn: () => get<{ ok: boolean }>('/freefire/sync/me'),
-    onSuccess: () => {
+    mutationFn: () => post<{ status: string; message: string }>('/freefire/sync/me'),
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.player('me') });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncStatus });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myMatches(1) });
-      setError(null);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaderboards });
+      setError(result.status === 'SKIPPED' ? result.message : null);
     },
     onError: (err: unknown) => {
       setError(err instanceof ApiError ? err.message : 'Sync failed.');

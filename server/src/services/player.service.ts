@@ -188,6 +188,7 @@ export async function updateMyProfile(
     }
     await prisma.user.update({ where: { id: userId }, data: { displayName } });
   }
+  let uidChanged = false;
   if (input.ffUid !== undefined) {
     const ffUid = input.ffUid.trim();
     if (ffUid && !/^\d{4,20}$/.test(ffUid)) {
@@ -200,6 +201,7 @@ export async function updateMyProfile(
       }
     }
     data.ffUid = ffUid || null;
+    uidChanged = ffUid !== profile.ffUid;
   }
   if (input.ffNickname !== undefined) data.ffNickname = input.ffNickname.trim().slice(0, 24) || null;
   if (input.region !== undefined) data.region = input.region;
@@ -208,6 +210,10 @@ export async function updateMyProfile(
   if (input.rankPoints !== undefined) data.rankPoints = input.rankPoints;
 
   await prisma.playerProfile.update({ where: { userId }, data });
+  if (uidChanged) {
+    await prisma.freeFireMatch.deleteMany({ where: { playerId: profile.id } });
+    await prisma.freeFireStats.deleteMany({ where: { playerId: profile.id } });
+  }
 }
 
 export async function getMyMatches(userId: string, page = 1) {
