@@ -19,18 +19,19 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { RankBadge, RoleBadge } from '../components/ui/Badges';
 import { cn } from '../lib/cn';
 
-type Filter = 'OPEN' | 'PENDING' | 'FILLED';
+type Filter = 'OPEN' | 'FULL' | 'CLOSED';
 
 const FILTER_LABELS: Record<Filter, string> = {
   OPEN: 'Open',
-  PENDING: 'Pending',
-  FILLED: 'Filled',
+  FULL: 'Filled',
+  CLOSED: 'Closed',
 };
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: 'border-success/40 bg-success/10 text-success',
-  PENDING: 'border-warning/40 bg-warning/10 text-warning',
-  FILLED: 'border-electric/30 bg-electric/10 text-electric',
+  FULL: 'border-electric/30 bg-electric/10 text-electric',
+  CLOSED: 'border-border bg-elevated text-muted',
+  EXPIRED: 'border-border bg-elevated text-faint',
 };
 
 export function SquadPage() {
@@ -79,7 +80,7 @@ export function SquadPage() {
         className="mb-5"
         value={filter}
         onChange={setFilter}
-        tabs={(['OPEN', 'PENDING', 'FILLED'] as Filter[]).map((value) => ({ value, label: FILTER_LABELS[value] }))}
+        tabs={(['OPEN', 'FULL', 'CLOSED'] as Filter[]).map((value) => ({ value, label: FILTER_LABELS[value] }))}
       />
       <AsyncView
         isLoading={isLoading}
