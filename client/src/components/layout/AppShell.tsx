@@ -26,6 +26,7 @@ import { useQuery } from '@tanstack/react-query';
 import { get } from '../../lib/api';
 import { QUERY_KEYS } from '../../lib/constants';
 import { Button } from '../ui/Button';
+import { HudSweep } from '../ui/HudSweep';
 
 interface NavItem {
   to: string;
@@ -111,7 +112,9 @@ export function AppShell() {
             initial={reducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="relative"
           >
+            <HudSweep className="h-[65vh]" delay={0.02} duration={0.4} />
             <OutletContent />
           </motion.div>
         </main>

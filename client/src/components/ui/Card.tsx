@@ -6,7 +6,7 @@ export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
     <div
       className={cn(
         'rounded-xl border border-border bg-gradient-to-b from-surface to-panel p-4 sm:p-5',
-        'transition-colors duration-150 hover:border-border-strong',
+        'transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-border-strong',
         className,
       )}
       {...rest}

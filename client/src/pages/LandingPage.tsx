@@ -1,7 +1,8 @@
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, Crosshair, Radio, Swords, Trophy } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useInView, useReducedMotion, type Variants } from 'framer-motion';
 import { get } from '../lib/api';
 import { QUERY_KEYS } from '../lib/constants';
 import type { Landing } from '../lib/types';
@@ -14,7 +15,21 @@ import { ProgressBar } from '../components/ui/ProgressBar';
 import { ErrorPanel } from '../components/ui/ErrorPanel';
 import { SkeletonRows } from '../components/ui/Skeleton';
 import { CountUp } from '../components/ui/CountUp';
+import { Reveal } from '../components/ui/Reveal';
+import { HudBrackets } from '../components/ui/HudBrackets';
+import { HudReticle } from '../components/ui/HudReticle';
+import { HudSweep } from '../components/ui/HudSweep';
 import { DEMO_ACCOUNTS } from '../lib/constants';
+
+const heroItem: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
+};
+
+const heroLine: Variants = {
+  hidden: { y: '110%' },
+  show: { y: '0%', transition: { duration: 0.5, ease: 'easeOut' } },
+};
 
 export function LandingPage() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -58,12 +73,20 @@ export function LandingPage() {
             <Hero data={data} />
             <StatBand data={data} />
             <div className="grid grid-cols-1 gap-6 py-12 lg:grid-cols-3">
-              <TopPlayers data={data} />
+              <Reveal index={0}>
+                <TopPlayers data={data} />
+              </Reveal>
               <div className="flex flex-col gap-6">
-                <ActiveChallenge data={data} />
-                <UpcomingEvents data={data} />
+                <Reveal index={1}>
+                  <ActiveChallenge data={data} />
+                </Reveal>
+                <Reveal index={2}>
+                  <UpcomingEvents data={data} />
+                </Reveal>
               </div>
-              <RecentActivity data={data} />
+              <Reveal index={3}>
+                <RecentActivity data={data} />
+              </Reveal>
             </div>
             <AchievementStrip data={data} />
             <CTA data={data} />
@@ -86,29 +109,40 @@ function Hero({ data }: { data: Landing }) {
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-grid [mask-image:radial-gradient(720px_360px_at_70%_0%,black,transparent)]" aria-hidden />
+      <HudSweep className="h-[420px]" interval={5} delay={0.8} duration={0.7} />
       <div className="relative grid grid-cols-1 items-center gap-10 py-14 sm:py-20 lg:grid-cols-2">
         <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          initial={reducedMotion ? false : 'hidden'}
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } } }}
         >
-          <p className="mb-4 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-accent">
-            <Crosshair size={14} aria-hidden />
+          <motion.p
+            variants={heroItem}
+            className="mb-4 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-accent"
+          >
+            <HudReticle className="h-6 w-6 text-accent" />
             Ready to drop?
-          </p>
+          </motion.p>
           <h1 className="text-balance font-display text-[42px] font-bold leading-[0.98] tracking-[-0.03em] text-text sm:text-[58px] lg:text-[64px]">
-            Play together.
-            <br />
-            <span className="text-accent">Dominate</span> together.
+            <span className="block overflow-hidden pb-1">
+              <motion.span variants={heroLine} className="block">
+                Play together.
+              </motion.span>
+            </span>
+            <span className="block overflow-hidden pb-1">
+              <motion.span variants={heroLine} className="block">
+                <span className="text-accent">Dominate</span> together.
+              </motion.span>
+            </span>
           </h1>
-          <p className="mt-5 max-w-[520px] text-[15px] leading-relaxed text-muted">
+          <motion.p variants={heroItem} className="mt-5 max-w-[520px] text-[15px] leading-relaxed text-muted">
             {data.guild.description ??
               'KINGS ONLY is a competitive Free Fire guild built around ranked grind, custom rooms, and Sunday scrims. Track every stat, every challenge, every win.'}
-          </p>
-          <p className="mt-4 font-mono text-[13px] text-muted">
+          </motion.p>
+          <motion.p variants={heroItem} className="mt-4 font-mono text-[13px] text-muted">
             Level {data.guild.level} · {data.guild.memberCount} members · {data.guild.region}
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          </motion.p>
+          <motion.div variants={heroItem} className="mt-7 flex flex-wrap gap-3">
             <Link to="/auth?tab=register">
               <Button size="lg">
                 Enter the guild <ArrowRight size={18} />
@@ -119,16 +153,18 @@ function Hero({ data }: { data: Landing }) {
                 Meet the squad
               </Button>
             </Link>
-          </div>
+          </motion.div>
         </motion.div>
 
         <motion.div
-          className="hidden lg:block"
+          className="relative hidden lg:block"
           initial={reducedMotion ? false : { opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, ease: 'easeOut', delay: 0.08 }}
         >
-          <div className="corner-brackets relative rounded-xl border border-border bg-surface/80 p-6 backdrop-blur-sm">
+          <div className="relative overflow-hidden rounded-xl border border-border bg-surface/80 p-6 backdrop-blur-sm">
+            <HudSweep interval={4.2} />
+            <HudBrackets className="z-10" />
             <div className="mb-4 flex items-center justify-between">
               <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-muted">
                 <span className="relative flex h-2 w-2">
@@ -140,11 +176,23 @@ function Hero({ data }: { data: Landing }) {
               <Radio size={14} className="text-success" aria-hidden />
             </div>
             <div className="flex flex-col">
-              {data.topPlayers.map((player) => (
-                <div key={player.id} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
-                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center font-mono text-[13px] ${player.rank === 1 ? 'rotate-45 bg-accent text-on-accent' : 'text-muted'}`}>
-                    {player.rank === 1 ? <Trophy size={12} className="-rotate-45" aria-hidden /> : player.rank}
-                  </span>
+              {data.topPlayers.map((player, i) => (
+                <motion.div
+                  key={player.id}
+                  initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeOut', delay: 0.45 + i * 0.09 }}
+                  className="flex items-center gap-3 border-b border-border py-3 last:border-0"
+                >
+                  <motion.span
+                    initial={reducedMotion ? false : { scale: 0 }}
+                    animate={{ scale: [0, 1.3, 1] }}
+                    transition={{ duration: 0.4, ease: 'easeOut', delay: 0.55 + i * 0.09 }}
+                  >
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center font-mono text-[13px] ${player.rank === 1 ? 'rotate-45 bg-accent text-on-accent' : 'text-muted'}`}>
+                      {player.rank === 1 ? <Trophy size={12} className="-rotate-45" aria-hidden /> : player.rank}
+                    </span>
+                  </motion.span>
                   <Avatar src={player.avatarUrl} name={player.displayName} size={36} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-semibold text-text">{player.displayName}</p>
@@ -154,9 +202,12 @@ function Hero({ data }: { data: Landing }) {
                     <p className="font-mono text-[15px] text-text">{formatCompact(player.kd)}</p>
                     <p className="text-[10px] uppercase tracking-wide text-muted">K/D</p>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
+          </div>
+          <div className="absolute -right-2 -top-8">
+            <HudReticle className="h-14 w-14 text-muted" label="Locked" />
           </div>
         </motion.div>
       </div>
@@ -173,16 +224,18 @@ function StatBand({ data }: { data: Landing }) {
   ];
   return (
     <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
-      {stats.map((stat) => (
-        <div key={stat.label} className="relative flex flex-col gap-1.5 bg-bg px-4 py-6">
-          <CountUp
-            value={stat.value}
-            format={(value) => (stat.label === 'Average K/D' ? value.toFixed(2) : formatCompact(value))}
-            className="font-mono text-[28px] font-bold leading-none text-text"
-          />
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted">{stat.label}</span>
+      {stats.map((stat, i) => (
+        <Reveal key={stat.label} index={i} className="relative bg-bg">
+          <div className="flex flex-col gap-1.5 px-4 py-6">
+            <CountUp
+              value={stat.value}
+              format={(value) => (stat.label === 'Average K/D' ? value.toFixed(2) : formatCompact(value))}
+              className="font-mono text-[28px] font-bold leading-none text-text"
+            />
+            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted">{stat.label}</span>
+          </div>
           <span className="absolute right-3 top-3 h-1.5 w-1.5 rotate-45 bg-accent/60" aria-hidden />
-        </div>
+        </Reveal>
       ))}
     </section>
   );
@@ -307,12 +360,14 @@ function AchievementStrip({ data }: { data: Landing }) {
         <div className="hud-divider flex-1" aria-hidden />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {data.achievements.map((achievement) => (
-          <div key={achievement.key} className="corner-brackets rounded-xl border border-border bg-surface p-4">
-            <Swords size={18} className="mb-2 text-accent" aria-hidden />
-            <p className="text-[13px] font-semibold text-text">{achievement.name}</p>
-            <RarityBadge rarity={achievement.rarity} className="mt-1.5" />
-          </div>
+        {data.achievements.map((achievement, i) => (
+          <Reveal key={achievement.key} index={i}>
+            <div className="corner-brackets rounded-xl border border-border bg-surface p-4">
+              <Swords size={18} className="mb-2 text-accent" aria-hidden />
+              <p className="text-[13px] font-semibold text-text">{achievement.name}</p>
+              <RarityBadge rarity={achievement.rarity} className="mt-1.5" />
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -320,10 +375,18 @@ function AchievementStrip({ data }: { data: Landing }) {
 }
 
 function CTA({ data }: { data: Landing }) {
+  const reducedMotion = useReducedMotion();
   return (
     <section className="relative mb-12 overflow-hidden">
-      <div className="corner-brackets pointer-events-none absolute inset-0 rounded-xl" aria-hidden />
-      <div className="relative flex flex-col items-center gap-4 rounded-xl border border-border bg-gradient-to-b from-surface to-panel px-6 py-14 text-center">
+      <HudBrackets className="z-10" delay={0.15} />
+      <motion.div
+        initial={reducedMotion ? false : { opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="relative flex flex-col items-center gap-4 rounded-xl border border-border bg-gradient-to-b from-surface to-panel px-6 py-14 text-center"
+      >
+        <BeaconRing />
         <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-accent">
           <Crosshair size={14} aria-hidden /> Last call
         </p>
@@ -338,7 +401,25 @@ function CTA({ data }: { data: Landing }) {
             Enter the guild <ArrowRight size={18} />
           </Button>
         </Link>
-      </div>
+      </motion.div>
     </section>
+  );
+}
+
+function BeaconRing() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+  const reducedMotion = useReducedMotion();
+  return (
+    <div ref={ref} className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+      {inView ? (
+        <motion.div
+          className="absolute h-28 w-28 rounded-full border border-accent/40"
+          initial={reducedMotion ? false : { scale: 0.35, opacity: 0 }}
+          animate={{ scale: 1.6, opacity: [0, 0.7, 0] }}
+          transition={{ duration: 1.1, ease: 'easeOut', ...(reducedMotion ? {} : { repeat: Infinity, repeatDelay: 1.8 }) }}
+        />
+      ) : null}
+    </div>
   );
 }

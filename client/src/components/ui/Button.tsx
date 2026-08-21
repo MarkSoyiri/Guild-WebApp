@@ -43,7 +43,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-semibold uppercase tracking-[0.07em] transition-colors duration-150 select-none',
+        'group relative inline-flex items-center justify-center font-semibold uppercase tracking-[0.07em] transition-colors duration-150 select-none',
         'disabled:cursor-not-allowed disabled:opacity-50',
         variantClasses[variant],
         sizeClasses[size],
@@ -52,6 +52,12 @@ export function Button({
       {...rest}
     >
       {loading ? <Loader2 className="h-[18px] w-[18px] animate-spin" aria-hidden /> : icon}
+      {variant === 'primary' && !disabled && !loading ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-[-60%] w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-500 ease-out group-hover:translate-x-[500%]"
+        />
+      ) : null}
       {children}
     </button>
   );

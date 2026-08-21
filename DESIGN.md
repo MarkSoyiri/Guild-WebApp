@@ -261,6 +261,7 @@ Recharts, dark-aware tokens only: grid `border`, axis `muted` 11px, bars `accent
 - List/feed items stagger in via `Reveal` (delay capped at 450ms).
 - Progress bars animate width over 600ms.
 - Status pings (live/success) are the only looping animation.
+- Landing hero exception: ONE slow ambient loop per section is allowed (radar sweep every ~4-5s, reticle rotation ~24s, beacon pulse) — dimmed, linear/ease-out, and fully disabled under `prefers-reduced-motion`.
 - `prefers-reduced-motion: reduce` disables all transform/opacity animation (global CSS + `useReducedMotion` guards).
 
 ---
