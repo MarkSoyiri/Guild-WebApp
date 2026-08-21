@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Bell, CalendarClock, Crown, Radio, Swords, Trophy } from 'lucide-react';
 import { get, ApiError } from '../lib/api';
-import { QUERY_KEYS, EVENT_TYPE_LABELS } from '../lib/constants';
+import { EVENT_TYPE_LABELS, POLL, QUERY_KEYS } from '../lib/constants';
 import type { Dashboard } from '../lib/types';
 import { formatCompact, formatDateTime, relativeTime } from '../lib/format';
 import { useAuth } from '../hooks/useAuth';
@@ -22,6 +22,7 @@ export function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.dashboard,
     queryFn: () => get<Dashboard>('/guild/dashboard'),
+    refetchInterval: POLL.dashboard,
   });
 
   const notMember = error instanceof ApiError && error.code === 'NOT_A_MEMBER';

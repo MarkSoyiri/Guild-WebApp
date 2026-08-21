@@ -24,7 +24,7 @@ import { useState } from 'react';
 import { cn } from '../../lib/cn';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../../lib/api';
-import { QUERY_KEYS } from '../../lib/constants';
+import { POLL, QUERY_KEYS } from '../../lib/constants';
 import { Button } from '../ui/Button';
 import { HudSweep } from '../ui/HudSweep';
 
@@ -64,7 +64,7 @@ export function AppShell() {
   const { data: unread } = useQuery({
     queryKey: QUERY_KEYS.unreadCount,
     queryFn: () => get<{ count: number }>('/notifications/unread-count'),
-    refetchInterval: 60_000,
+    refetchInterval: POLL.unreadCount,
   });
 
   return (

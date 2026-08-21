@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, MessageCircle, Radio, Send, Trash2 } from 'lucide-react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { del, get, post as apiPost } from '../lib/api';
-import { POST_TYPE_LABELS, QUERY_KEYS, REACTION_EMOJI, REACTION_TYPES, type PostType, type ReactionType } from '../lib/constants';
+import { POST_TYPE_LABELS, POLL, QUERY_KEYS, REACTION_EMOJI, REACTION_TYPES, type PostType, type ReactionType } from '../lib/constants';
 import type { Comment, Paginated, Post, ReactionSummary } from '../lib/types';
 import { relativeTime } from '../lib/format';
 import { useAuth } from '../hooks/useAuth';
@@ -42,6 +42,7 @@ export function CommunityPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.posts('pageSize=30'),
     queryFn: () => get<Paginated<Post>>('/community/posts?pageSize=30'),
+    refetchInterval: POLL.community,
   });
 
   return (
@@ -176,6 +177,7 @@ function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expan
     queryKey: QUERY_KEYS.comments(post.id),
     queryFn: () => get<Comment[]>(`/community/posts/${post.id}/comments`),
     enabled: expanded,
+    refetchInterval: expanded ? POLL.comments : false,
   });
 
   const deleteMutation = useMutation({

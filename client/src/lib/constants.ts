@@ -209,3 +209,11 @@ export const QUERY_KEYS = {
   seasons: ['seasons'] as const,
   landing: ['landing'] as const,
 };
+
+export const POLL = {
+  comments: 5_000,
+  community: 15_000,
+  notificationsList: 15_000,
+  unreadCount: 30_000,
+  dashboard: 30_000,
+} as const;

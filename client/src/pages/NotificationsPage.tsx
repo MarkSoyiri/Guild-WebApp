@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { BellOff, CalendarClock, CheckCheck, Crosshair, Crown, Radio, ShieldAlert, Swords, Trophy, UserPlus, Users, type LucideIcon } from 'lucide-react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { get, post } from '../lib/api';
-import { NOTIFICATION_TYPE_LABELS, QUERY_KEYS } from '../lib/constants';
+import { NOTIFICATION_TYPE_LABELS, POLL, QUERY_KEYS } from '../lib/constants';
 import type { Notification, Paginated } from '../lib/types';
 import { relativeTime } from '../lib/format';
 import { AsyncView, RowSkeleton } from '../components/ui/PlayerRow';
@@ -46,6 +46,7 @@ export function NotificationsPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.notifications(filter),
     queryFn: () => get<Paginated<Notification>>(`/notifications?pageSize=50${filter === 'UNREAD' ? '&unread=true' : ''}`),
+    refetchInterval: POLL.notificationsList,
   });
 
   const invalidate = () => {
