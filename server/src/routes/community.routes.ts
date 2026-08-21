@@ -33,19 +33,20 @@ communityRouter.get(
     }),
     'query',
   ),
-  async (req, res) => {
+  async (req: AuthedRequest, res) => {
     const data = await listPosts({
       page: queryInt(req, 'page'),
       pageSize: queryInt(req, 'pageSize'),
       authorId: queryString(req, 'authorId'),
       type: queryString(req, 'type'),
+      viewerId: req.user!.id,
     });
     res.json({ data });
   },
 );
 
-communityRouter.get('/posts/:id', async (req, res) => {
-  const data = await getPost(param(req, 'id'));
+communityRouter.get('/posts/:id', async (req: AuthedRequest, res) => {
+  const data = await getPost(param(req, 'id'), req.user!.id);
   res.json({ data });
 });
 

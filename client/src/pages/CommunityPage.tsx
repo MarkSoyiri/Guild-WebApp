@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, MessageCircle, Radio, Send, Trash2 } from 'luci
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { del, get, post as apiPost } from '../lib/api';
 import { POST_TYPE_LABELS, QUERY_KEYS, REACTION_EMOJI, REACTION_TYPES, type PostType, type ReactionType } from '../lib/constants';
-import type { Comment, Paginated, Post, PostDetail } from '../lib/types';
+import type { Comment, Paginated, Post, ReactionSummary } from '../lib/types';
 import { relativeTime } from '../lib/format';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/ui/Avatar';
@@ -140,16 +140,37 @@ function ComposeCard() {
   );
 }
 
+function withToggledReaction(reactions: ReactionSummary[], tapped: ReactionType): ReactionSummary[] {
+  const next = reactions.map((reaction) => ({ ...reaction }));
+  const current = next.find((reaction) => reaction.mine);
+  const target = next.find((reaction) => reaction.type === tapped);
+  if (current?.type === tapped) {
+    if (target) {
+      target.count -= 1;
+      target.mine = false;
+    }
+  } else {
+    const previous = next.find((reaction) => reaction.type === current?.type);
+    if (previous) {
+      previous.count -= 1;
+      previous.mine = false;
+    }
+    if (target) {
+      target.count += 1;
+      target.mine = true;
+    } else {
+      next.push({ type: tapped, count: 1, mine: true });
+    }
+  }
+  return next.filter((reaction) => reaction.count > 0);
+}
+
 function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expanded: boolean; onToggle: () => void; isModerator: boolean }) {
   const queryClient = useQueryClient();
   const { me } = useAuth();
   const isMine = post.authorId === me?.id;
 
-  const { data: detail } = useQuery({
-    queryKey: QUERY_KEYS.post(post.id),
-    queryFn: () => get<PostDetail>(`/community/posts/${post.id}`),
-    enabled: expanded,
-  });
+  const postsKey = QUERY_KEYS.posts('pageSize=30');
 
   const { data: comments } = useQuery({
     queryKey: QUERY_KEYS.comments(post.id),
@@ -164,22 +185,34 @@ function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expan
 
   const reactionMutation = useMutation({
     mutationFn: (reaction: ReactionType) => apiPost<{ ok: boolean }>(`/community/posts/${post.id}/reactions`, { type: reaction }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(post.id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.posts('pageSize=30') });
+    onMutate: async (reaction) => {
+      await queryClient.cancelQueries({ queryKey: postsKey });
+      const previous = queryClient.getQueryData<Paginated<Post>>(postsKey);
+      queryClient.setQueryData<Paginated<Post>>(postsKey, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((item) => (item.id === post.id ? { ...item, reactions: withToggledReaction(item.reactions, reaction) } : item)),
+            }
+          : old,
+      );
+      return { previous };
     },
+    onError: (_err: unknown, _reaction, context) => {
+      if (context?.previous) queryClient.setQueryData(postsKey, context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: postsKey }),
   });
 
   const commentMutation = useMutation({
     mutationFn: (content: string) => apiPost<{ ok: boolean }>(`/community/posts/${post.id}/comments`, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comments(post.id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(post.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.posts('pageSize=30') });
     },
   });
 
-  const reactions = detail?.reactions ?? [];
+  const reactions = post.reactions;
   const mine = new Set(reactions.filter((r) => r.mine).map((r) => r.type));
 
   return (
@@ -236,6 +269,9 @@ function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expan
             {expanded ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
           </button>
         </div>
+        {reactionMutation.isError ? (
+          <p className="mt-2 font-mono text-[11px] text-danger">Reaction failed — try again.</p>
+        ) : null}
         {expanded ? (
           <div className="mt-4 border-t border-border pt-4">
             <p className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted">

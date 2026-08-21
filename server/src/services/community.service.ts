@@ -4,7 +4,37 @@ import { notify } from './notification.service';
 import { grant } from './xp.service';
 import { XP_RULES } from '../utils/constants';
 
-export async function listPosts(input: { page?: number; pageSize?: number; authorId?: string; type?: string }) {
+type ReactionSummary = { type: string; count: number; mine: boolean };
+
+async function reactionSummaries(postIds: string[], viewerId?: string): Promise<Map<string, ReactionSummary[]>> {
+  if (postIds.length === 0) return new Map();
+  const reactions = await prisma.reaction.findMany({
+    where: { postId: { in: postIds } },
+    select: { postId: true, type: true, userId: true },
+  });
+  const map = new Map<string, ReactionSummary[]>();
+  for (const reaction of reactions) {
+    const entries = map.get(reaction.postId) ?? [];
+    const existing = entries.find((entry) => entry.type === reaction.type);
+    const mine = Boolean(viewerId && reaction.userId === viewerId);
+    if (existing) {
+      existing.count += 1;
+      existing.mine = existing.mine || mine;
+    } else {
+      entries.push({ type: reaction.type, count: 1, mine });
+    }
+    map.set(reaction.postId, entries);
+  }
+  return map;
+}
+
+export async function listPosts(input: {
+  page?: number;
+  pageSize?: number;
+  authorId?: string;
+  type?: string;
+  viewerId: string;
+}) {
   const where: Record<string, unknown> = { status: 'PUBLISHED' };
   if (input.authorId) where.authorId = input.authorId;
   if (input.type) where.type = input.type;
@@ -23,10 +53,17 @@ export async function listPosts(input: { page?: number; pageSize?: number; autho
     }),
     prisma.post.count({ where }),
   ]);
-  return { items, total, page, pageSize, totalPages: Math.max(Math.ceil(total / pageSize), 1) };
+  const summaries = await reactionSummaries(items.map((post) => post.id), input.viewerId);
+  return {
+    items: items.map((post) => ({ ...post, reactions: summaries.get(post.id) ?? [] })),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(Math.ceil(total / pageSize), 1),
+  };
 }
 
-export async function getPost(id: string) {
+export async function getPost(id: string, viewerId: string) {
   const post = await prisma.post.findUnique({
     where: { id },
     include: {
@@ -35,7 +72,8 @@ export async function getPost(id: string) {
     },
   });
   if (!post || post.status !== 'PUBLISHED') throw new AppError(404, 'NOT_FOUND', 'Post not found');
-  return post;
+  const summaries = await reactionSummaries([post.id], viewerId);
+  return { ...post, reactions: summaries.get(post.id) ?? [] };
 }
 
 export async function createPost(input: {

@@ -317,6 +317,12 @@ export interface SquadRequest {
   participants: SquadParticipant[];
 }
 
+export interface ReactionSummary {
+  type: string;
+  count: number;
+  mine: boolean;
+}
+
 export interface Post {
   id: string;
   authorId: string;
@@ -327,11 +333,11 @@ export interface Post {
   createdAt: string;
   author: { id: string; displayName: string; avatarUrl: string | null };
   _count: { comments: number; reactions: number };
+  reactions: ReactionSummary[];
 }
 
 export interface PostDetail extends Post {
   comments?: Comment[];
-  reactions?: { type: string; count: number; mine: boolean }[];
 }
 
 export interface Comment {
