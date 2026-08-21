@@ -57,14 +57,14 @@ Return shapes:
 
 ## The external provider (live data)
 
-`ExternalFreeFireProvider` is a REST client for the community `free-ff-api` service (MIT-licensed, hosted at `https://free-ff-api-src-5plp.onrender.com`). It is a real provider with live stats but **no official relationship to Garena**; treat it as a community data source that can change or go down.
+`ExternalFreeFireProvider` is a REST client for the Free Fire Community API (`https://developers.freefirecommunity.com/api/v1`, endpoints `/info` and `/stats`). It is a real provider with live stats but **no official relationship to Garena**; treat it as a community data source that can change or go down. An API key is required — get a free one at `developers.freefirecommunity.com` (100 requests/hour on the free tier). Requests also send a custom `User-Agent`; the API rejects generic library user agents.
 
 Configuration (`FF_PROVIDER=external`):
 
-| Env var             | Default                                      | Purpose                            |
-| ------------------- | -------------------------------------------- | ---------------------------------- |
-| `FF_API_BASE_URL`   | `https://free-ff-api-src-5plp.onrender.com`  | Base URL of the stats API          |
-| `FF_API_KEY`        | (empty)                                      | Optional `x-api-key` header        |
+| Env var             | Default                                              | Purpose                            |
+| ------------------- | ---------------------------------------------------- | ---------------------------------- |
+| `FF_API_BASE_URL`   | `https://developers.freefirecommunity.com/api/v1`    | Base URL of the stats API          |
+| `FF_API_KEY`        | (empty)                                              | Required `x-api-key` header        |
 | `FF_API_TIMEOUT_MS` | `9000`                                       | Request timeout                    |
 | `FF_PROVIDER_RATE_LIMIT` | `30`                                     | Per-minute provider budget         |
 | `FF_SYNC_INTERVAL`  | `120`                                        | Per-player sync cooldown (seconds) |

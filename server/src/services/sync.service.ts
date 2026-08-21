@@ -80,12 +80,12 @@ export async function syncPlayer(playerId: string, triggeredBy: 'MANUAL' | 'SCHE
   const startedAt = Date.now();
 
   try {
-    const [remoteProfile, remoteStats, remoteRank, remoteMatches] = await Promise.all([
+    const [remoteProfile, remoteStats, remoteMatches] = await Promise.all([
       provider.getPlayerProfile(profile.ffUid, profile.region),
       provider.getPlayerStats(profile.ffUid, profile.region),
-      provider.getRankData(profile.ffUid, profile.region),
       provider.getMatchHistory(profile.ffUid, profile.region, 12),
     ]);
+    const remoteRank = remoteProfile.rank;
 
     const prev = profile.stats ?? {
       kills: 0,

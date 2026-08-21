@@ -3,8 +3,18 @@ import { AppError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
 import type { FFMatchResult, FFProfile, FFRank, FFStats, FFStatsBase, FreeFireProvider } from './types';
 
-const REGIONS = ['IND', 'BR', 'SG', 'RU', 'ID', 'TW', 'US', 'VN', 'TH', 'ME', 'PK', 'CIS', 'BD'] as const;
-type Region = (typeof REGIONS)[number];
+const USER_AGENT = 'KINGS-ONLY-Guild/1.0 (+https://kings-only-guild.vercel.app)';
+
+const SG_REGIONS = ['SG', 'RU', 'ID', 'TW', 'VN', 'TH', 'ME', 'PK', 'CIS', 'BD'];
+const BR_REGIONS = ['BR', 'US'];
+
+function regionBucket(region: string): 'ind' | 'br' | 'sg' {
+  const upper = region.trim().toUpperCase();
+  if (upper === 'IND') return 'ind';
+  if (BR_REGIONS.includes(upper)) return 'br';
+  if (SG_REGIONS.includes(upper)) return 'sg';
+  return 'sg';
+}
 
 const TIER_BY_RANK: Record<number, string> = {
   0: 'Bronze III',
@@ -30,9 +40,11 @@ const TIER_BY_RANK: Record<number, string> = {
   20: 'Grandmaster III',
 };
 
-function tierFor(rank: number): string {
-  if (rank >= 20) return 'Grandmaster III';
-  return TIER_BY_RANK[rank] ?? 'Bronze III';
+function tierFor(rank: unknown): string {
+  if (typeof rank === 'string' && rank.trim()) return rank.trim();
+  const numeric = num(rank);
+  if (numeric >= 20) return 'Grandmaster III';
+  return TIER_BY_RANK[numeric] ?? 'Bronze III';
 }
 
 const ZERO: FFStatsBase = {
@@ -48,17 +60,6 @@ const ZERO: FFStatsBase = {
   totalXP: 0,
 };
 
-interface AccountResponse {
-  basicInfo?: {
-    accountId?: string;
-    nickname?: string;
-    region?: string;
-    level?: number;
-    rank?: number;
-    rankingPoints?: number;
-  };
-}
-
 interface ModeStats {
   gamesPlayed?: number;
   wins?: number;
@@ -72,42 +73,50 @@ interface ModeStats {
   };
 }
 
-interface StatsResponse {
-  soloStats?: ModeStats;
-  duoStats?: ModeStats;
-  quadStats?: ModeStats;
-}
-
-function normalizeRegion(region: string): Region {
-  const upper = region.trim().toUpperCase();
-  return (REGIONS as readonly string[]).includes(upper) ? (upper as Region) : 'IND';
-}
+type InfoBody = Record<string, unknown>;
+type StatsBody = Record<string, unknown>;
 
 function num(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
+  return 0;
+}
+
+function pick<T>(body: Record<string, unknown>, keys: string[]): T | null {
+  for (const key of keys) {
+    const value = body[key];
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value as T;
+  }
+  return null;
 }
 
 export class ExternalFreeFireProvider implements FreeFireProvider {
   readonly id = 'external';
-  readonly label = 'Free Fire Stats API';
+  readonly label = 'Free Fire Community API';
   readonly isLive = true;
 
   private async request<T>(path: string, uid: string, region: string): Promise<T> {
+    if (!env.FF_API_KEY) {
+      throw new AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Free Fire data source is not configured. An API key is required.');
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), env.FF_API_TIMEOUT_MS);
     try {
-      const headers: Record<string, string> = { Accept: 'application/json' };
-      if (env.FF_API_KEY) headers['x-api-key'] = env.FF_API_KEY;
-      const response = await fetch(`${env.FF_API_BASE_URL}${path}?region=${normalizeRegion(region)}&uid=${encodeURIComponent(uid)}`, {
-        headers,
+      const url = `${env.FF_API_BASE_URL}${path}?region=${regionBucket(region)}&uid=${encodeURIComponent(uid)}`;
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': USER_AGENT,
+          'x-api-key': env.FF_API_KEY,
+        },
         signal: controller.signal,
       });
-      const body = (await response.json().catch(() => null)) as T & { error?: string; message?: string };
-      if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as (T & { success?: boolean; error?: string; message?: string }) | null;
+      if (!response.ok || (body && body.success === false)) {
         throw new AppError(502, 'PROVIDER_ERROR', body?.message ?? `Free Fire provider returned ${response.status}`);
       }
-      if (body && body.error) {
-        throw new AppError(502, 'PROVIDER_ERROR', body.message ?? body.error);
+      if (!body) {
+        throw new AppError(502, 'PROVIDER_ERROR', 'Free Fire provider returned an unreadable response');
       }
       return body;
     } catch (error) {
@@ -120,46 +129,41 @@ export class ExternalFreeFireProvider implements FreeFireProvider {
     }
   }
 
-  private async fetchAccount(uid: string, region: string): Promise<AccountResponse> {
-    return this.request<AccountResponse>('/api/v1/account', uid, region);
-  }
-
-  private async fetchStats(uid: string, region: string): Promise<StatsResponse> {
-    return this.request<StatsResponse>('/api/v1/playerstats', uid, region);
-  }
-
   async getPlayerProfile(uid: string, region: string): Promise<FFProfile> {
-    const account = await this.fetchAccount(uid, region);
-    const basic = account.basicInfo;
-    if (!basic?.nickname) {
+    const body = await this.request<InfoBody>('/info', uid, region);
+    const basic = pick<Record<string, unknown>>(body, ['basicInfo', 'accountInfo', 'playerInfo', 'profile']) ?? body;
+    const nickname = typeof basic.nickname === 'string' ? basic.nickname : null;
+    if (!nickname) {
       throw new AppError(404, 'PLAYER_NOT_FOUND', 'No Free Fire account found for that UID');
     }
     return {
-      uid: String(basic.accountId ?? uid),
-      nickname: basic.nickname,
-      region: normalizeRegion(region),
+      uid,
+      nickname,
+      region: regionBucket(region),
       level: num(basic.level),
-      rank: { tier: tierFor(num(basic.rank)), points: num(basic.rankingPoints) },
+      rank: { tier: tierFor(basic.rank ?? basic.rankTier), points: num(basic.rankingPoints ?? basic.rankPoints) },
     };
   }
 
   async getPlayerStats(uid: string, region: string): Promise<FFStats> {
-    const stats = await this.fetchStats(uid, region);
-    const modes = [stats.soloStats, stats.duoStats, stats.quadStats].filter((m): m is ModeStats => Boolean(m));
-    const aggregate: FFStatsBase = modes.reduce<FFStatsBase>(
-      (acc, mode) => {
-        const detailed = mode.detailedStats ?? {};
-        acc.matches += num(mode.gamesPlayed);
-        acc.wins += num(mode.wins);
-        acc.kills += num(mode.kills);
-        acc.deaths += num(detailed.deaths);
-        acc.top10s += num(detailed.topNTimes);
-        acc.headshots += num(detailed.headshotKills ?? detailed.headshots);
-        acc.mostKillsInMatch = Math.max(acc.mostKillsInMatch, num(detailed.highestKills));
-        return acc;
-      },
-      { ...ZERO },
-    );
+    const body = await this.request<StatsBody>('/stats', uid, region);
+    const modes = pick<Record<string, unknown>>(body, ['stats', 'modeStats', 'careerStats']) ?? body;
+    const groups = [
+      pick<ModeStats>(modes, ['soloStats', 'solo']),
+      pick<ModeStats>(modes, ['duoStats', 'duo']),
+      pick<ModeStats>(modes, ['quadStats', 'squadStats', 'quad', 'squad']),
+    ].filter((m): m is ModeStats => Boolean(m));
+    const aggregate = groups.reduce<FFStatsBase>((acc, mode) => {
+      const detailed = mode.detailedStats ?? {};
+      acc.matches += num(mode.gamesPlayed);
+      acc.wins += num(mode.wins);
+      acc.kills += num(mode.kills);
+      acc.deaths += num(detailed.deaths);
+      acc.top10s += num(detailed.topNTimes);
+      acc.headshots += num(detailed.headshotKills ?? detailed.headshots);
+      acc.mostKillsInMatch = Math.max(acc.mostKillsInMatch, num(detailed.highestKills));
+      return acc;
+    }, { ...ZERO });
     if (aggregate.matches === 0) {
       throw new AppError(404, 'PLAYER_STATS_NOT_FOUND', 'No statistics available for that UID');
     }
@@ -171,8 +175,8 @@ export class ExternalFreeFireProvider implements FreeFireProvider {
   }
 
   async getRankData(uid: string, region: string): Promise<FFRank> {
-    const account = await this.fetchAccount(uid, region);
-    const basic = account.basicInfo;
-    return { tier: tierFor(num(basic?.rank)), points: num(basic?.rankingPoints) };
+    const body = await this.request<InfoBody>('/info', uid, region);
+    const basic = pick<Record<string, unknown>>(body, ['basicInfo', 'accountInfo', 'playerInfo', 'profile']) ?? body;
+    return { tier: tierFor(basic.rank ?? basic.rankTier), points: num(basic.rankingPoints ?? basic.rankPoints) };
   }
 }

@@ -16,7 +16,7 @@ const schema = z.object({
   FF_PROVIDER: z.enum(['mock', 'external']).default('mock'),
   FF_SYNC_INTERVAL: z.coerce.number().default(120),
   FF_PROVIDER_RATE_LIMIT: z.coerce.number().default(30),
-  FF_API_BASE_URL: z.string().default('https://free-ff-api-src-5plp.onrender.com'),
+  FF_API_BASE_URL: z.string().default('https://developers.freefirecommunity.com/api/v1'),
   FF_API_KEY: z.string().default(''),
   FF_API_TIMEOUT_MS: z.coerce.number().default(9000),
   UPSTASH_REDIS_REST_URL: z.string().default(''),
