@@ -5,6 +5,7 @@ import { Plus, Swords, Trophy } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { get, post } from '../lib/api';
 import {
+  POLL,
   QUERY_KEYS,
   TOURNAMENT_FORMAT_LABELS,
   TOURNAMENT_STATUS_LABELS,
@@ -38,6 +39,7 @@ export function TournamentsPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.tournaments(filter === 'ALL' ? undefined : filter),
     queryFn: () => get<Tournament[]>(`/tournaments${filter !== 'ALL' ? `?status=${filter}` : ''}`),
+    refetchInterval: POLL.tournaments,
   });
 
   return (

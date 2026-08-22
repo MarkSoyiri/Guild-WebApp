@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Crown, Play, Swords, Trophy, X } from 'lucide-react';
 import { get, post } from '../lib/api';
-import { QUERY_KEYS, TOURNAMENT_FORMAT_LABELS, type TournamentFormat } from '../lib/constants';
+import { POLL, QUERY_KEYS, TOURNAMENT_FORMAT_LABELS, type TournamentFormat } from '../lib/constants';
 import type { Team, Tournament, TournamentMatch } from '../lib/types';
 import { formatDate, formatDateTime } from '../lib/format';
 import { useAuth } from '../hooks/useAuth';
@@ -31,6 +31,7 @@ export function TournamentDetailPage() {
     queryKey: QUERY_KEYS.tournament(id ?? ''),
     queryFn: () => get<Tournament>(`/tournaments/${id}`),
     enabled: Boolean(id),
+    refetchInterval: POLL.tournaments,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tournament(id ?? '') });
