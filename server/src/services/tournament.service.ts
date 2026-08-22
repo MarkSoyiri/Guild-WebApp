@@ -163,19 +163,33 @@ export async function startTournament(id: string): Promise<void> {
   await prisma.tournament.update({ where: { id }, data: { status: 'ACTIVE' } });
 }
 
-function buildBracket(teamIds: string[]): { round: number; position: number; teamAId: string | null; teamBId: string | null }[] {
-  const size = 2 ** Math.ceil(Math.log2(teamIds.length));
-  const matches: { round: number; position: number; teamAId: string | null; teamBId: string | null }[] = [];
-  let position = 0;
-  const roundCount = Math.log2(size);
-  for (let slot = 0; slot < size / 2; slot++) {
-    matches.push({
-      round: roundCount,
-      position,
-      teamAId: teamIds[slot * 2] ?? null,
-      teamBId: teamIds[slot * 2 + 1] ?? null,
-    });
-    position++;
+interface BracketMatch {
+  round: number;
+  position: number;
+  teamAId: string | null;
+  teamBId: string | null;
+}
+
+function buildBracket(teamIds: string[]): BracketMatch[] {
+  const size = 2 ** Math.ceil(Math.log2(Math.max(teamIds.length, 2)));
+  const topRound = Math.log2(size) - 1;
+  const matches: BracketMatch[] = [];
+  let entrants: (string | null)[] = [];
+  for (let position = 0; position < size / 2; position++) {
+    const teamAId = teamIds[position * 2] ?? null;
+    const teamBId = teamIds[position * 2 + 1] ?? null;
+    matches.push({ round: topRound, position, teamAId, teamBId });
+    entrants.push(teamAId !== null && teamBId !== null ? null : (teamAId ?? teamBId));
+  }
+  for (let round = topRound - 1; round >= 0; round--) {
+    const winners: (string | null)[] = [];
+    for (let position = 0; position * 2 < entrants.length; position++) {
+      const teamAId = entrants[position * 2] ?? null;
+      const teamBId = entrants[position * 2 + 1] ?? null;
+      matches.push({ round, position, teamAId, teamBId });
+      winners.push(teamAId !== null && teamBId !== null ? null : (teamAId ?? teamBId));
+    }
+    entrants = winners;
   }
   return matches;
 }
