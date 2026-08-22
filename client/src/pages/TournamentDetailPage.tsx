@@ -13,7 +13,6 @@ import { AsyncView, RowSkeleton } from '../components/ui/PlayerRow';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select } from '../components/ui/Input';
 import { Sheet } from '../components/ui/Sheet';
-import { ErrorPanel } from '../components/ui/ErrorPanel';
 import { EmptyState } from '../components/ui/EmptyState';
 import { CountUp } from '../components/ui/CountUp';
 import { StatRow } from '../components/ui/StatBlock';
@@ -45,10 +44,6 @@ export function TournamentDetailPage() {
     mutationFn: () => post<{ ok: boolean }>(`/tournaments/${id}/cancel`),
     onSuccess: invalidate,
   });
-
-  if (isError) {
-    return <ErrorPanel message="Tournament not found — the bracket may have been scrapped." onRetry={refetch} />;
-  }
 
   const rounds = useMemo(() => {
     const groups = new Map<number, TournamentMatch[]>();
