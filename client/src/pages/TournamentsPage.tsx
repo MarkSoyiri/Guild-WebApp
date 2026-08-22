@@ -96,7 +96,7 @@ function TournamentCard({ tournament, index }: { tournament: Tournament; index: 
   const registered = tournament._count.participants;
   const capacity = tournament.size;
   const percent = Math.round((registered / capacity) * 100);
-  const nextMatch = tournament.matches.find((m) => !m.winnerTeamId && m.scheduledAt);
+  const nextMatch = tournament.matches?.find((m) => !m.winnerTeamId && m.scheduledAt) ?? null;
   return (
     <motion.div
       initial={reducedMotion ? false : { opacity: 0, y: 12 }}

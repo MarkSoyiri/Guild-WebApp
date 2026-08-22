@@ -287,8 +287,8 @@ export interface Tournament {
   mvp?: { displayName: string } | null;
   createdAt: string;
   _count: { participants: number; matches: number };
-  participants: { id: string; team: { id: string; name: string; tag: string; captainId: string } }[];
-  matches: TournamentMatch[];
+  participants?: { id: string; team: { id: string; name: string; tag: string; captainId: string } }[];
+  matches?: TournamentMatch[];
 }
 
 export interface SquadParticipant {

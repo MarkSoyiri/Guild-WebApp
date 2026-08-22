@@ -60,7 +60,7 @@ export function TournamentDetailPage() {
     return [...groups.entries()].sort((a, b) => a[0] - b[0]);
   }, [data]);
 
-  const winner = data?.matches.find((m) => m.round === 0);
+  const winner = data?.matches?.find((m) => m.round === 0);
 
   return (
     <>
@@ -92,7 +92,7 @@ export function TournamentDetailPage() {
               starting={startMutation.isPending}
               cancelling={cancelMutation.isPending}
             />
-            {data.matches.length > 0 ? (
+            {(data.matches?.length ?? 0) > 0 ? (
               <BracketView rounds={rounds} data={data} canManage={canManage} onResult={setResultFor} />
             ) : (
               <SeededSquads data={data} />
@@ -323,7 +323,7 @@ function SeededSquads({ data }: { data: Tournament }) {
         <div className="hud-divider flex-1" aria-hidden />
         <span className="font-mono text-[11px] text-muted">{data._count.participants}/{data.size}</span>
       </div>
-      {data.participants.length === 0 ? (
+      {data.participants?.length === 0 ? (
         <EmptyState
           icon={<Swords size={28} />}
           title="No squads locked in yet"
@@ -331,7 +331,7 @@ function SeededSquads({ data }: { data: Tournament }) {
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {data.participants.map((participant, index) => (
+          {data.participants?.map((participant, index) => (
             <div
               key={participant.id}
               className="flex items-center gap-3 rounded-xl border border-border bg-gradient-to-b from-surface to-panel p-3.5 transition-colors hover:border-border-strong"
@@ -362,7 +362,7 @@ function RegisterTeamSheet({ open, onClose, tournament }: { open: boolean; onClo
     enabled: open,
   });
 
-  const registered = new Set(tournament?.participants.map((p) => p.team.id) ?? []);
+  const registered = new Set(tournament?.participants?.map((p) => p.team.id) ?? []);
   const candidates = (teams ?? []).filter((team) => !registered.has(team.id));
 
   const registerMutation = useMutation({
@@ -413,7 +413,7 @@ function MatchResultSheet({ open, matchId, onClose, tournament }: { open: boolea
   const [scores, setScores] = useState({ scoreA: '', scoreB: '' });
   const [error, setError] = useState<string | null>(null);
 
-  const match = tournament?.matches.find((m) => m.id === matchId);
+  const match = tournament?.matches?.find((m) => m.id === matchId);
 
   const resultMutation = useMutation({
     mutationFn: () =>
