@@ -20,11 +20,18 @@ import { useAuth } from '../../hooks/useAuth';
 import { Avatar } from '../ui/Avatar';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Sheet } from '../ui/Sheet';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../../lib/api';
 import { POLL, QUERY_KEYS } from '../../lib/constants';
+import type { Paginated, Post } from '../../lib/types';
+import {
+  communityActivityOf,
+  hasNewCommunityActivity,
+  markCommunitySeen,
+  readCommunitySeen,
+} from '../../lib/communitySeen';
 import { Button } from '../ui/Button';
 import { HudSweep } from '../ui/HudSweep';
 
@@ -66,6 +73,28 @@ export function AppShell() {
     queryFn: () => get<{ count: number }>('/notifications/unread-count'),
     refetchInterval: POLL.unreadCount,
   });
+  const { data: activity } = useQuery({
+    queryKey: QUERY_KEYS.communityActivity,
+    queryFn: () => get<Paginated<Post>>('/community/posts?pageSize=5'),
+    refetchInterval: POLL.communityActivity,
+  });
+  const onCommunity = location.pathname.startsWith('/app/community');
+  const currentActivity = communityActivityOf(activity?.items ?? []);
+  const seen = readCommunitySeen();
+  const hasCommunityNews = !onCommunity && seen !== null && hasNewCommunityActivity(currentActivity, seen);
+  const newPostCount = seen ? (activity?.items ?? []).filter((post) => post.createdAt > seen.newestAt).length : 0;
+
+  useEffect(() => {
+    if (!currentActivity.newestAt) return;
+    const stored = readCommunitySeen();
+    if (!stored) {
+      markCommunitySeen(currentActivity);
+      return;
+    }
+    if (onCommunity && hasNewCommunityActivity(currentActivity, stored)) {
+      markCommunitySeen(currentActivity);
+    }
+  });
 
   return (
     <div className="min-h-screen bg-bg">
@@ -73,8 +102,13 @@ export function AppShell() {
         <Brand />
         <Link
           to="/app/community"
-          className="mx-3 mt-4 flex items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-r from-accent/15 to-transparent p-2.5 transition-colors hover:border-accent/50"
+          className="relative mx-3 mt-4 flex items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-r from-accent/15 to-transparent p-2.5 transition-colors hover:border-accent/50"
         >
+          {hasCommunityNews ? (
+            <span className="absolute right-3 top-3 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-mono text-[10px] font-bold text-on-accent">
+              {newPostCount > 0 ? newPostCount : '•'}
+            </span>
+          ) : null}
           <span className="clip-notch-sm flex h-9 w-9 shrink-0 items-center justify-center bg-gradient-to-br from-accent to-accent-2 text-on-accent">
             <MessageSquare size={16} aria-hidden />
           </span>
@@ -104,10 +138,15 @@ export function AppShell() {
           <div className="flex items-center gap-1">
             <Link
               to="/app/community"
-              className="rounded-lg p-2.5 text-muted transition-colors hover:text-text"
+              className="relative rounded-lg p-2.5 text-muted transition-colors hover:text-text"
               aria-label="Community"
             >
               <MessageSquare size={20} />
+              {hasCommunityNews ? (
+                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-mono text-[10px] font-bold text-on-accent">
+                  {newPostCount > 0 ? newPostCount : '•'}
+                </span>
+              ) : null}
             </Link>
             <Link
               to="/app/notifications"

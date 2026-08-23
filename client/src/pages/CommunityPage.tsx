@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, MessageCircle, Radio, Send, Trash2 } from 'lucide-react';
@@ -37,8 +37,13 @@ const cardVariants: Variants = {
 
 export function CommunityPage() {
   const { me } = useAuth();
+  const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.communityActivity });
+  }, [queryClient]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.posts('pageSize=30'),

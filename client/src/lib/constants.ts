@@ -195,6 +195,7 @@ export const QUERY_KEYS = {
   tournament: (id: string) => ['tournament', id] as const,
   squad: (params: string) => ['squad', params] as const,
   posts: (params: string) => ['posts', params] as const,
+  communityActivity: ['community-activity'] as const,
   post: (id: string) => ['post', id] as const,
   comments: (postId: string) => ['comments', postId] as const,
   notifications: (params: string) => ['notifications', params] as const,
@@ -213,6 +214,7 @@ export const QUERY_KEYS = {
 export const POLL = {
   comments: 5_000,
   community: 8_000,
+  communityActivity: 30_000,
   tournaments: 10_000,
   notificationsList: 15_000,
   unreadCount: 30_000,
