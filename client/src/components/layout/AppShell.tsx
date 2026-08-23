@@ -71,6 +71,18 @@ export function AppShell() {
     <div className="min-h-screen bg-bg">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[232px] flex-col border-r border-border bg-panel lg:flex">
         <Brand />
+        <Link
+          to="/app/community"
+          className="mx-3 mt-4 flex items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-r from-accent/15 to-transparent p-2.5 transition-colors hover:border-accent/50"
+        >
+          <span className="clip-notch-sm flex h-9 w-9 shrink-0 items-center justify-center bg-gradient-to-br from-accent to-accent-2 text-on-accent">
+            <MessageSquare size={16} aria-hidden />
+          </span>
+          <span className="flex min-w-0 flex-col leading-none">
+            <span className="font-display text-[13px] font-bold text-text">Community</span>
+            <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Guild feed · live</span>
+          </span>
+        </Link>
         <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Primary">
           <NavSection title="Main" items={MAIN_NAV} />
           <NavSection title="Compete" items={COMPETE_NAV} />
@@ -90,6 +102,13 @@ export function AppShell() {
             <BrandMark />
           </Link>
           <div className="flex items-center gap-1">
+            <Link
+              to="/app/community"
+              className="rounded-lg p-2.5 text-muted transition-colors hover:text-text"
+              aria-label="Community"
+            >
+              <MessageSquare size={20} />
+            </Link>
             <Link
               to="/app/notifications"
               className="relative rounded-lg p-2.5 text-muted transition-colors hover:text-text"
