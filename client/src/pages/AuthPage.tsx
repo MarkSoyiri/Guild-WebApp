@@ -23,6 +23,7 @@ export function AuthPage() {
     <div className="relative flex min-h-screen flex-col bg-bg">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-grid [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden />
       <header className="relative border-b border-border">
+        <div className="safe-t" aria-hidden />
         <div className="mx-auto flex h-16 w-full max-w-[420px] items-center px-4">
           <div className="flex items-center gap-2.5">
             <div className="clip-notch-sm flex h-9 w-9 items-center justify-center bg-gradient-to-br from-accent to-accent-2 font-display text-[15px] font-bold text-on-accent">

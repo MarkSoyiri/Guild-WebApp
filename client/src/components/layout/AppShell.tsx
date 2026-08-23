@@ -83,7 +83,9 @@ export function AppShell() {
       </aside>
 
       <div className="lg:pl-[232px]">
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-bg/95 px-4 backdrop-blur-sm lg:hidden">
+        <header className="sticky top-0 z-20 border-b border-border bg-bg/95 backdrop-blur-sm lg:hidden">
+          <div className="safe-t" aria-hidden />
+          <div className="flex h-14 items-center justify-between px-4">
           <Link to="/app" className="flex items-center gap-2">
             <BrandMark />
           </Link>
@@ -103,6 +105,7 @@ export function AppShell() {
             <Link to="/app/settings" className="rounded-lg p-1" aria-label="Settings">
               <Avatar src={me?.avatarUrl} name={me?.displayName ?? 'Me'} size={32} />
             </Link>
+          </div>
           </div>
         </header>
 
