@@ -217,4 +217,5 @@ export const POLL = {
   notificationsList: 15_000,
   unreadCount: 30_000,
   dashboard: 30_000,
+  updateCheck: 5 * 60_000,
 } as const;

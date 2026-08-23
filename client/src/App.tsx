@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Skeleton } from './components/ui/Skeleton';
 import { AppShell } from './components/layout/AppShell';
+import { UpdateBanner } from './components/ui/UpdateBanner';
 import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -65,6 +66,7 @@ export function App() {
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <UpdateBanner />
     </BrowserRouter>
   );
 }
