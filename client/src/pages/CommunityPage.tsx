@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, MessageCircle, Radio, Send, Trash2 } from 'lucide-react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
@@ -222,9 +223,19 @@ function PostCard({ post, expanded, onToggle, isModerator }: { post: Post; expan
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(360px_160px_at_100%_0%,black,transparent)]" aria-hidden />
       <div className="relative">
         <div className="flex items-center gap-3">
-          <Avatar src={post.author.avatarUrl} name={post.author.displayName} size={38} />
+          <Link
+            to={`/app/players/${post.authorId}`}
+            aria-label={`View ${post.author.displayName}'s profile`}
+            className="shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Avatar src={post.author.avatarUrl} name={post.author.displayName} size={38} />
+          </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-semibold text-text">{post.author.displayName}</p>
+            <p className="truncate text-[14px] font-semibold text-text">
+              <Link to={`/app/players/${post.authorId}`} className="transition-colors hover:text-accent">
+                {post.author.displayName}
+              </Link>
+            </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <span
                 className={cn(
@@ -309,10 +320,19 @@ function CommentRow({ comment, isModerator }: { comment: Comment; isModerator: b
 
   return (
     <div className="flex items-start gap-2.5">
-      <Avatar src={comment.author.avatarUrl} name={comment.author.displayName} size={28} />
+      <Link
+        to={`/app/players/${comment.authorId}`}
+        aria-label={`View ${comment.author.displayName}'s profile`}
+        className="shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <Avatar src={comment.author.avatarUrl} name={comment.author.displayName} size={28} />
+      </Link>
       <div className="min-w-0 flex-1 rounded-lg border border-border bg-elevated/60 px-3 py-2">
         <p className="text-[12px] font-semibold text-text">
-          {comment.author.displayName} <span className="font-mono font-normal text-faint">· {relativeTime(comment.createdAt)}</span>
+          <Link to={`/app/players/${comment.authorId}`} className="transition-colors hover:text-accent">
+            {comment.author.displayName}
+          </Link>{' '}
+          <span className="font-mono font-normal text-faint">· {relativeTime(comment.createdAt)}</span>
         </p>
         <p className="mt-0.5 whitespace-pre-wrap text-[13px] leading-relaxed text-muted">{comment.content}</p>
       </div>
